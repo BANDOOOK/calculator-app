@@ -1,77 +1,108 @@
 const display = document.getElementById("display");
-const buttons = document.querySelectorAll("button");
+const buttons = document.querySelectorAll(".buttons button");
+const themeToggle = document.getElementById("themeToggle");
+const soundToggle = document.getElementById("soundToggle");
+const backspaceBtn = document.getElementById("backspace");
+const clearBtn = document.getElementById("clear");
+
 let currentInput = "";
+let soundEnabled = true;
+const clickSound = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_8dcd687017.mp3?filename=click-124467.mp3");
 
-// ✅ Check if we can add decimal
-function canAddDecimal() {
-const parts = currentInput.split(/[\+\-\*\/]/);
-const lastNumber = parts[parts.length - 1];
-return !lastNumber.includes(".");
-}
-
-// ✅ Function to update display
 function updateDisplay() {
-display.value = currentInput;
+  display.value = currentInput || "0";
 }
 
-// ✅ Function to calculate safely
+function canAddDecimal() {
+  const parts = currentInput.split(/[\+\-\*\/]/);
+  const lastNumber = parts[parts.length - 1];
+  return !lastNumber.includes(".");
+}
+
+function isOperator(char) {
+  return ["+", "-", "*", "/"].includes(char);
+}
+
 function calculate() {
-try {
-  currentInput = eval(currentInput).toString();
-  updateDisplay();
-} catch {
-  display.value = "Error";
-  currentInput = "";
-}
+  try {
+    if (currentInput.trim() === "") return;
+    const result = eval(currentInput);
+    currentInput = result.toString();
+    updateDisplay();
+  } catch {
+    display.value = "Error";
+    currentInput = "";
+  }
 }
 
-// ✅ Handle button clicks
-buttons.forEach((button) => {
-button.addEventListener("click", () => {
-  const value = button.textContent;
+function handleInput(value) {
+  const lastChar = currentInput.slice(-1);
+
+  if (soundEnabled) clickSound.play();
 
   if (value === "C") {
     currentInput = "";
-    updateDisplay();
   } else if (value === "=") {
     calculate();
+    return;
   } else if (value === ".") {
-    if (canAddDecimal()) {
+    if (canAddDecimal()) currentInput += value;
+  } else if (isOperator(value)) {
+    if (currentInput === "") return;
+    if (isOperator(lastChar)) {
+      currentInput = currentInput.slice(0, -1) + value;
+    } else {
       currentInput += value;
-      updateDisplay();
     }
   } else {
-    // prevent starting with invalid operators
-    if (["+", "*", "/"].includes(value) && currentInput === "") return;
-
     currentInput += value;
-    updateDisplay();
   }
-});
-});
 
-// ✅ Handle keyboard input
-document.addEventListener("keydown", (event) => {
-const key = event.key;
-
-if (!isNaN(key) || ["+", "-", "*", "/"].includes(key)) {
-  // prevent starting with invalid operators
-  if (["+", "*", "/"].includes(key) && currentInput === "") return;
-
-  currentInput += key;
-  updateDisplay();
-} else if (key === ".") {
-  if (canAddDecimal()) {
-    currentInput += key;
-    updateDisplay();
-  }
-} else if (key === "Enter") {
-  calculate();
-} else if (key === "Backspace") {
-  currentInput = currentInput.slice(0, -1);
-  updateDisplay();
-} else if (key.toLowerCase() === "c") {
-  currentInput = "";
   updateDisplay();
 }
+
+buttons.forEach((button) => {
+  button.addEventListener("click", () => handleInput(button.textContent));
+});
+
+backspaceBtn.addEventListener("click", () => {
+  currentInput = currentInput.slice(0, -1);
+  updateDisplay();
+  if (soundEnabled) clickSound.play();
+});
+
+clearBtn.addEventListener("click", () => {
+  currentInput = "";
+  updateDisplay();
+  if (soundEnabled) clickSound.play();
+});
+
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("light");
+  themeToggle.textContent =
+    document.body.classList.contains("light") ? "🌞" : "🌗";
+  if (soundEnabled) clickSound.play();
+});
+
+soundToggle.addEventListener("click", () => {
+  soundEnabled = !soundEnabled;
+  soundToggle.textContent = soundEnabled ? "🔊" : "🔈";
+});
+
+document.addEventListener("keydown", (event) => {
+  const key = event.key;
+
+  if (!isNaN(key) || key === ".") {
+    handleInput(key);
+  } else if (isOperator(key)) {
+    handleInput(key);
+  } else if (key === "Enter") {
+    calculate();
+  } else if (key === "Backspace") {
+    currentInput = currentInput.slice(0, -1);
+    updateDisplay();
+  } else if (key.toLowerCase() === "c") {
+    currentInput = "";
+    updateDisplay();
+  }
 });
